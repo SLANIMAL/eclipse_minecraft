@@ -1,0 +1,208 @@
+// Prisma schema mirroring Supabase Postgres entities plus game-specific tables
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Profile {
+  id             String           @id @default(uuid())
+  authId         String?          @unique @map("auth_id")
+  username       String?          @unique
+  minecraftUuid  String?          @unique @map("minecraft_uuid")
+  rank           String?          @default("Player")
+  coins          Int              @default(0)
+  experience     Int              @default(0)
+  level          Int              @default(1)
+  firstLoginAt   DateTime?        @default(now()) @map("first_login_at")
+  lastLoginAt    DateTime?        @default(now()) @map("last_login_at")
+  isOnline       Boolean          @default(false) @map("is_online")
+  isBanned       Boolean          @default(false) @map("is_banned")
+  banReason      String?          @map("ban_reason")
+  banExpiresAt   DateTime?        @map("ban_expires_at")
+  createdAt      DateTime         @default(now()) @map("created_at")
+  updatedAt      DateTime         @default(now()) @map("updated_at")
+
+  purchases      Purchase[]
+  votes          Vote[]
+  playerStats    PlayerStat?
+  staffApps      StaffApplication[]
+  contactMessages ContactMessage[]
+
+  @@map("profiles")
+}
+
+model Purchase {
+  id             String    @id @default(uuid())
+  userId         String    @map("user_id")
+  itemType       String    @map("item_type")
+  itemName       String    @map("item_name")
+  itemPrice      Decimal   @map("item_price")
+  paymentMethod  String?   @default("stripe") @map("payment_method")
+  paymentId      String?   @map("payment_id")
+  status         String?   @default("pending")
+  purchasedAt    DateTime? @default(now()) @map("purchased_at")
+  expiresAt      DateTime? @map("expires_at")
+
+  user Profile @relation(fields: [userId], references: [id])
+
+  @@index([userId], map: "idx_purchases_user_id")
+  @@map("purchases")
+}
+
+model Vote {
+  id           String    @id @default(uuid())
+  userId       String?   @map("user_id")
+  username     String
+  ipAddress    String?   @map("ip_address")
+  serviceId    String    @map("service_id")
+  serviceName  String    @map("service_name")
+  votedAt      DateTime? @default(now()) @map("voted_at")
+  rewardClaimed Boolean  @default(false) @map("reward_claimed")
+  rewardCoins  Int       @default(100) @map("reward_coins")
+  createdAt    DateTime? @default(now()) @map("created_at")
+
+  user Profile? @relation(fields: [userId], references: [id])
+
+  @@index([userId], map: "idx_votes_user_id")
+  @@index([serviceId], map: "idx_votes_service_id")
+  @@map("votes")
+}
+
+model ServerStat {
+  id            String   @id @default(uuid())
+  statDate      DateTime @default(now()) @map("stat_date")
+  totalPlayers  Int      @default(0) @map("total_players")
+  uniquePlayers Int      @default(0) @map("unique_players")
+  newPlayers    Int      @default(0) @map("new_players")
+  peakPlayers   Int      @default(0) @map("peak_players")
+  totalVotes    Int      @default(0) @map("total_votes")
+  totalPurchases Decimal @default(0.0) @map("total_purchases")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  @@map("server_stats")
+}
+
+model PlayerStat {
+  id             String    @id @default(uuid())
+  userId         String    @unique @map("user_id")
+  kills          Int       @default(0)
+  deaths         Int       @default(0)
+  blocksPlaced   Int       @default(0) @map("blocks_placed")
+  blocksBroken   Int       @default(0) @map("blocks_broken")
+  playtimeMinutes Int      @default(0) @map("playtime_minutes")
+  lastSeen       DateTime? @default(now()) @map("last_seen")
+  updatedAt      DateTime? @default(now()) @map("updated_at")
+  createdAt      DateTime? @default(now()) @map("created_at")
+
+  user Profile @relation(fields: [userId], references: [id])
+
+  @@map("player_stats")
+}
+
+model StaffApplication {
+  id               String    @id @default(uuid())
+  userId           String    @map("user_id")
+  positionApplied  String    @map("position_applied")
+  applicationText  String    @map("application_text")
+  discordUsername  String?   @map("discord_username")
+  age              Int?
+  timezone         String?
+  experience       String?
+  status           String?   @default("pending")
+  reviewedBy       String?   @map("reviewed_by")
+  reviewedAt       DateTime? @map("reviewed_at")
+  createdAt        DateTime? @default(now()) @map("created_at")
+
+  user Profile @relation(fields: [userId], references: [id])
+
+  @@map("staff_applications")
+}
+
+model ContactMessage {
+  id         String    @id @default(uuid())
+  userId     String?   @map("user_id")
+  name       String
+  email      String
+  subject    String
+  message    String
+  status     String?   @default("unread")
+  repliedAt  DateTime? @map("replied_at")
+  createdAt  DateTime? @default(now()) @map("created_at")
+
+  user Profile? @relation(fields: [userId], references: [id])
+
+  @@map("contact_messages")
+}
+
+model Gamemode {
+  id          String            @id @default(uuid())
+  slug        String            @unique
+  name        String
+  description String
+  difficulty  String
+  color       String?
+  heroImage   String?           @map("hero_image")
+  createdAt   DateTime?         @default(now()) @map("created_at")
+  updatedAt   DateTime?         @default(now()) @map("updated_at")
+
+  features    GamemodeFeature[]
+  rewards     GamemodeReward[]
+
+  @@map("gamemodes")
+}
+
+model GamemodeFeature {
+  id          String   @id @default(uuid())
+  gamemodeId  String   @map("gamemode_id")
+  label       String
+  description String?
+  icon        String?
+
+  gamemode Gamemode @relation(fields: [gamemodeId], references: [id])
+
+  @@map("gamemode_features")
+}
+
+model GamemodeReward {
+  id          String   @id @default(uuid())
+  gamemodeId  String   @map("gamemode_id")
+  label       String
+  rarity      String?
+
+  gamemode Gamemode @relation(fields: [gamemodeId], references: [id])
+
+  @@map("gamemode_rewards")
+}
+
+model StoreCategory {
+  id        String     @id @default(uuid())
+  slug      String     @unique
+  name      String
+  createdAt DateTime?  @default(now()) @map("created_at")
+  updatedAt DateTime?  @default(now()) @map("updated_at")
+
+  items StoreItem[]
+
+  @@map("store_categories")
+}
+
+model StoreItem {
+  id          String        @id @default(uuid())
+  categoryId  String        @map("category_id")
+  name        String
+  description String?
+  price       Decimal
+  perks       String?
+  imageUrl    String?       @map("image_url")
+  createdAt   DateTime?     @default(now()) @map("created_at")
+  updatedAt   DateTime?     @default(now()) @map("updated_at")
+
+  category StoreCategory @relation(fields: [categoryId], references: [id])
+
+  @@map("store_items")
+}

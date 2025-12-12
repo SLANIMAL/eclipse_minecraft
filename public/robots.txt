@@ -1,0 +1,38 @@
+# Eclipse Network Robots.txt
+# Generated on 2024-12-12
+
+User-agent: *
+Allow: /
+
+# Prioritize important pages
+Crawl-delay: 1
+
+# Sitemap location
+Sitemap: https://eclipsemc.me/sitemap.xml
+
+# Block unnecessary crawling of admin/utility areas
+Disallow: /admin/
+Disallow: /api/
+Disallow: /_next/
+Disallow: /static/js/
+Disallow: /static/css/
+
+# Allow specific bot access
+User-agent: Googlebot
+Allow: /
+
+User-agent: Bingbot
+Allow: /
+
+User-agent: Slurp
+Allow: /
+
+# Social media crawlers
+User-agent: facebookexternalhit
+Allow: /
+
+User-agent: Twitterbot
+Allow: /
+
+User-agent: LinkedInBot
+Allow: /

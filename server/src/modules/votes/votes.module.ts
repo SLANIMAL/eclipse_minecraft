@@ -1,0 +1,15 @@
+import { Module } from '@nestjs/common';
+
+import { MinecraftModule } from '../../minecraft/minecraft.module';
+import { PrismaModule } from '../../prisma/prisma.module';
+import { AuthModule } from '../auth/auth.module';
+import { VotesController } from './votes.controller';
+import { VotesService } from './votes.service';
+
+@Module({
+  imports: [PrismaModule, MinecraftModule, AuthModule],
+  controllers: [VotesController],
+  providers: [VotesService],
+  exports: [VotesService],
+})
+export class VotesModule {}
