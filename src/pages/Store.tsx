@@ -1,6 +1,9 @@
 import { useState } from 'react';
 import { ShoppingCart, Crown, Star, Zap, Gift, Plus, Minus, Trash2, X } from 'lucide-react';
 import { Button } from '../components/Button';
+import { StripePaymentForm } from '../components/StripePaymentForm';
+import { StripeProvider } from '../contexts/StripeContext';
+import { createPaymentIntent } from '../services/stripeService';
 import bgImage from '../assets/bg.png';
 
 interface CartItem {
@@ -334,10 +337,10 @@ const items = [
 export function Store() {
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [showCart, setShowCart] = useState(false);
-  const [checkoutStep, setCheckoutStep] = useState<'cart' | 'checkout' | 'confirm'>(
-    'cart'
-  );
+  const [checkoutStep, setCheckoutStep] = useState<'cart' | 'checkout' | 'confirm'>('cart');
   const [selectedGamemode, setSelectedGamemode] = useState<'survival' | 'pvp' | 'bedwars' | 'lifesteal' | 'battleroyale'>('survival');
+  const [clientSecret, setClientSecret] = useState<string>('');
+  const [isLoading, setIsLoading] = useState(false);
 
   const addToCart = (item: any, type: 'rank' | 'item') => {
     const cartItem: CartItem = {
@@ -375,10 +378,31 @@ export function Store() {
 
   const total = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
-  const handleCheckout = () => {
-    if (checkoutStep === 'checkout') {
+  const handleCheckout = async () => {
+    if (checkoutStep === 'cart') {
+      setIsLoading(true);
+      try {
+        const { clientSecret: secret } = await createPaymentIntent(cartItems);
+        setClientSecret(secret);
+        setCheckoutStep('checkout');
+      } catch (error) {
+        console.error('Error creating payment intent:', error);
+        alert('Failed to initialize payment. Please try again.');
+      } finally {
+        setIsLoading(false);
+      }
+    } else if (checkoutStep === 'checkout') {
       setCheckoutStep('confirm');
     }
+  };
+
+  const handlePaymentSuccess = () => {
+    setCheckoutStep('confirm');
+  };
+
+  const handlePaymentCancel = () => {
+    setCheckoutStep('cart');
+    setClientSecret('');
   };
 
     return (
@@ -587,49 +611,20 @@ export function Store() {
               </div>
             ) : checkoutStep === 'checkout' ? (
               <div className="p-6">
-                <div className="bg-minecraft-accent/5 border border-minecraft-accent/20 rounded-lg p-6 mb-6">
-                  <h3 className="font-bold text-minecraft-green mb-4">Billing Information</h3>
-                  <div className="space-y-4">
-                    <input
-                      type="text"
-                      placeholder="Full Name"
-                      className="w-full bg-minecraft-dark border border-minecraft-accent/30 rounded px-4 py-2 text-white placeholder-gray-500 focus:outline-none focus:border-minecraft-accent"
+                {clientSecret ? (
+                  <StripeProvider options={{ clientSecret }}>
+                    <StripePaymentForm
+                      clientSecret={clientSecret}
+                      amount={total}
+                      onSuccess={handlePaymentSuccess}
+                      onCancel={handlePaymentCancel}
                     />
-                    <input
-                      type="email"
-                      placeholder="Email"
-                      className="w-full bg-minecraft-dark border border-minecraft-accent/30 rounded px-4 py-2 text-white placeholder-gray-500 focus:outline-none focus:border-minecraft-accent"
-                    />
-                    <div className="grid grid-cols-2 gap-4">
-                      <input
-                        type="text"
-                        placeholder="Card Number"
-                        className="w-full bg-minecraft-dark border border-minecraft-accent/30 rounded px-4 py-2 text-white placeholder-gray-500 focus:outline-none focus:border-minecraft-accent"
-                      />
-                      <input
-                        type="text"
-                        placeholder="CVV"
-                        className="w-full bg-minecraft-dark border border-minecraft-accent/30 rounded px-4 py-2 text-white placeholder-gray-500 focus:outline-none focus:border-minecraft-accent"
-                      />
-                    </div>
+                  </StripeProvider>
+                ) : (
+                  <div className="text-center py-8">
+                    <p className="text-gray-400">Loading payment form...</p>
                   </div>
-                </div>
-                <div className="flex gap-4">
-                  <Button
-                    variant="secondary"
-                    onClick={() => setCheckoutStep('cart')}
-                    className="flex-1"
-                  >
-                    Back
-                  </Button>
-                  <Button
-                    variant="accent"
-                    onClick={handleCheckout}
-                    className="flex-1"
-                  >
-                    Confirm Payment
-                  </Button>
-                </div>
+                )}
               </div>
             ) : (
               <div className="p-6">
@@ -683,10 +678,11 @@ export function Store() {
 
                     <Button
                       variant="accent"
-                      onClick={() => setCheckoutStep('checkout')}
+                      onClick={handleCheckout}
                       className="w-full"
+                      disabled={isLoading}
                     >
-                      Proceed to Checkout
+                      {isLoading ? 'Initializing...' : 'Proceed to Checkout'}
                     </Button>
                   </>
                 )}

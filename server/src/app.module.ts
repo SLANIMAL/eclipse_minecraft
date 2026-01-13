@@ -11,6 +11,7 @@ import { LeaderboardsModule } from './modules/leaderboards/leaderboards.module';
 import { VotesModule } from './modules/votes/votes.module';
 import { HealthModule } from './modules/health/health.module';
 import { MinecraftModule } from './minecraft/minecraft.module';
+import { StripeModule } from './stripe/stripe.module';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { MinecraftModule } from './minecraft/minecraft.module';
     VotesModule,
     HealthModule,
     MinecraftModule,
+    StripeModule,
   ],
 })
 export class AppModule {}
